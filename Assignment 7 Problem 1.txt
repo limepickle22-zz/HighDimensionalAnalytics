@@ -1,0 +1,56 @@
+>> load('C:\\Users\\SSamtani\\Downloads\\full.mat', 'X');
+>> noiselet1024 = noiselet(1024);
+>> rng(1)
+>> k = randperm(1024);
+>> phi600 = noiselet1024(k(1:600), :);
+>> phi700 = noiselet1024(k(1:700), :);
+>> phi800 = noiselet1024(k(1:800), :);
+>> phi900 = noiselet1024(k(1:900), :);
+>> load('C:\\Users\\SSamtani\\Downloads\\haar.mat', 'W');
+>> y600 = (phi600*X);
+>> y700 = (phi700*X);
+>> y800 = (phi800*X);
+>> y900 = (phi900*X);
+>> x0 = W'*(phi600'*y600);
+>> xp = l1eq_pd(x0, phi600*inv(W), [], y600, 1e-7);
+>> xprec = real(inv(W)*xp);
+>> plot(1:1:1024, X)
+>> plot(1:1:1024, xprec)
+>> error600 = norm(xprec - X);
+>> x0 = W'*(phi700'*y700);
+>> xp = l1eq_pd(x0, phi700*inv(W), [], y700, 1e-7);
+>> xprec = real(inv(W)*xp);
+>> error700 = norm(xprec - X);
+>> x0 = W'*(phi800'*y800);
+>> xp = l1eq_pd(x0, phi800*inv(W), [], y800, 1e-7);
+>> xprec = real(inv(W)*xp);
+>> error800 = norm(xprec - X);
+>> x0 = W'*(phi900'*y900);
+>> xp = l1eq_pd(x0, phi900*inv(W), [], y900, 1e-7);
+>> xprec = real(inv(W)*xp);
+>> error900 = norm(xprec - X);
+>> plot(600:100:900, [error600, error700, error800, error900])
+>> XN = X + normrnd(0, 1, size(X));
+>> y600 = (phi600*XN);
+>> y700 = (phi700*XN);
+>> y800 = (phi800*XN);
+>> y900 = (phi900*XN);
+>> x0 = W'*(phi600'*y600);
+>> xp = l1eq_pd(x0, phi600*inv(W), [], y600, 1e-7);
+>> xprec = real(inv(W)*xp);
+>> plot(1:1:1024, XN)
+>> plot(1:1:1024, xprec)
+>> error600 = norm(xprec - XN);
+>> x0 = W'*(phi700'*y700);
+>> xp = l1eq_pd(x0, phi700*inv(W), [], y700, 1e-7);
+>> xprec = real(inv(W)*xp);
+>> error700 = norm(xprec - XN);
+>> x0 = W'*(phi800'*y800);
+>> xp = l1eq_pd(x0, phi800*inv(W), [], y800, 1e-7);
+>> xprec = real(inv(W)*xp);
+>> error800 = norm(xprec - XN);
+>> x0 = W'*(phi900'*y900);
+>> xp = l1eq_pd(x0, phi900*inv(W), [], y900, 1e-7);
+>> xprec = real(inv(W)*xp);
+>> error900 = norm(xprec - XN);
+>> plot(600:100:900, [error600, error700, error800, error900])

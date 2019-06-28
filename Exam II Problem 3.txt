@@ -1,0 +1,149 @@
+>> load("C:\\Users\\SSamtani\\Downloads\\elastic.mat")
+>> predictors = 5; rows = size(X_train, 1);
+>> X_train_quadrant = zeros(size(X_train, 1), 400); %Use only top right quadrant of images
+>> X_test_quadrant = zeros(size(X_test, 1), 400);
+>> for i = 1:size(X_train, 1)
+	transition = reshape(X_train(i, :), [96, 96])';
+	subset = transition(28:47, 48:67);
+	X_train_small(i, :) = reshape(subset, [400, 1]);
+	end
+>> for i = 1:size(X_test, 1)
+	transition = reshape(X_test(i, :), [96, 96])';
+	subset = transition(28:47, 48:67);
+	X_test_small(i, :) = reshape(subset, [400, 1]);
+	end
+>> X_y1_positions = zeros(size(X_train, 1), predictors); %Find index of least intense pixels in y1 direction
+>> X_y2_positions = zeros(size(X_train, 1), predictors); %Find index of least intense pixels in y2 direction
+>> X_y1_positions_test = zeros(size(X_test, 1), predictors);
+>> X_y2_positions_test = zeros(size(X_test, 1), predictors);
+>> for i = 1:size(X_train, 1)
+	[B, I] = mink(X_train_small(i, :), predictors);
+	X_y1_positions(i, :) = ceil(I/20) + 48;
+	X_y2_positions(i, :) = mod(I, 20) + 28;
+	end
+>> for i = 1:size(X_test, 1)
+	[B, I] = mink(X_test_small(i, :), predictors);
+	X_y1_positions_test(i, :) = ceil(I/20) + 48;
+	X_y2_positions_test(i, :) = mod(I, 20) + 28;
+	end
+>> t = 1e-9; iterations = 100;
+>> lambdas1 = 0:.01:1;
+
+% Accelerated Proximal Gradient Descent 
+>> for i = 1:101
+	tf = false(rows,1);
+	tf(1:round(.8*rows)) = true;
+	tf = tf(randperm(rows));   
+	X_y1_cv_train = X_y1_positions(tf,:);
+	X_y1_cv_test = X_y1_positions(~tf,:);
+	y1_cv_train = y1_train(tf, :);
+	y1_cv_test = y1_train(~tf,:);
+	X_y2_cv_train = X_y2_positions(tf,:);
+	X_y2_cv_test = X_y2_positions(~tf,:);
+	y2_cv_train = y2_train(tf, :);
+	y2_cv_test = y2_train(~tf,:);
+	optlam1_y1 = 0; optlam2_y1 = 0;
+	optlam1_y2 = 0; optlam2_y2 = 0;
+	error_y1 = 1000000;
+	error_y2 = 1000000;
+	error_list_y1 = zeros(10, 1);
+	error_list_y2 = zeros(10, 1);
+	for j = 1:10
+		[beta_hat_y1, new_error_y1] = APGD(X_y1_cv_train, y1_cv_train, X_y1_cv_test, y1_cv_test, lambdas1(i), 1 - lambdas1(i), t, iterations);
+		[beta_hat_y2, new_error_y2] = APGD(X_y2_cv_train, y2_cv_train, X_y2_cv_test, y2_cv_test, lambdas1(i), 1 - lambdas1(i), t, iterations);
+		error_list_y1(j) = new_error_y1;
+		error_list_y2(j) = new_error_y2; 
+	end
+	if mean(error_list_y1) < error_y1 
+		optlam1_y1 = lambdas1(i);
+		optlam2_y1 = 1 - lambdas1(i);
+		error_y1 = mean(error_list_y1);
+	end 
+	if mean(error_list_y2) < error_y2 
+		optlam1_y2 = lambdas1(i);
+		optlam2_y2 = 1 - lambdas1(i);
+		error_y2 = mean(error_list_y2);
+	end 
+	end
+>> [beta_hat_y1, MSE_y1] = APGD(X_y1_positions, y1_train, X_y1_positions_test, y1_test, optlam1_y1, optlam2_y1, t, iterations);
+>> [beta_hat_y2, MSE_y2] = APGD(X_y2_positions, y2_train, X_y2_positions_test, y2_test, optlam1_y2, optlam2_y2, t, iterations);
+
+% Coordinate Descent
+>> for i = 1:101
+	tf = false(rows,1);
+	tf(1:round(.8*rows)) = true;
+	tf = tf(randperm(rows));   
+	X_y1_cv_train = X_y1_positions(tf,:);
+	X_y1_cv_test = X_y1_positions(~tf,:);
+	y1_cv_train = y1_train(tf, :);
+	y1_cv_test = y1_train(~tf,:);
+	X_y2_cv_train = X_y2_positions(tf,:);
+	X_y2_cv_test = X_y2_positions(~tf,:);
+	y2_cv_train = y2_train(tf, :);
+	y2_cv_test = y2_train(~tf,:);
+	optlam1_y1 = 0; optlam2_y1 = 0;
+	optlam1_y2 = 0; optlam2_y2 = 0;
+	error_y1 = 1000000;
+	error_y2 = 1000000;
+	error_list_y1 = zeros(10, 1);
+	error_list_y2 = zeros(10, 1);
+	for j = 1:10
+		[beta_hat_y1, new_error_y1] = CD(X_y1_cv_train, y1_cv_train, X_y1_cv_test, y1_cv_test, lambdas1(i), 1 - lambdas1(i), iterations);
+		[beta_hat_y2, new_error_y2] = CD(X_y2_cv_train, y2_cv_train, X_y2_cv_test, y2_cv_test, lambdas1(i), 1 - lambdas1(i), iterations);
+		error_list_y1(j) = new_error_y1;
+		error_list_y2(j) = new_error_y2; 
+	end
+	if mean(error_list_y1) < error_y1 
+		optlam1_y1 = lambdas1(i);
+		optlam2_y1 = 1 - lambdas1(i);
+		error_y1 = mean(error_list_y1);
+	end 
+	if mean(error_list_y2) < error_y2 
+		optlam1_y2 = lambdas1(i);
+		optlam2_y2 = 1 - lambdas1(i);
+		error_y2 = mean(error_list_y2);
+	end 
+	end
+>> [beta_hat_y1, MSE_y1] = CD(X_y1_positions, y1_train, X_y1_positions_test, y1_test, optlam1_y1, optlam2_y1, iterations);
+>> [beta_hat_y2, MSE_y2] = CD(X_y2_positions, y2_train, X_y2_positions_test, y2_test, optlam1_y2, optlam2_y2, iterations);
+
+% Function definition for Accelerated Proximal Gradient Descent
+function [beta_new, MSPE] = APGD(A_train, y_train, A_test, y_test, lam1, lam2, t, iterations)
+	beta = zeros(size(A_train, 2), iterations);
+	beta_new = zeros(size(A_train, 2), 1);
+    for k = 3:iterations
+        beta_current = beta(:, k - 1);
+        beta_prev = beta(:, k - 2);
+        w = beta_current + ((k - 2)/(k + 1))*(beta_current - beta_prev);
+        grad_g = -2*A_train'*(y_train - A_train*w);
+        beta_new_gd = w - t*grad_g;
+        for i = 1:length(beta_new_gd)
+            if beta_new_gd(i) > lam1*t; beta_new(i) = (1/(1 + 2*lam2))*(beta_new_gd(i) - lam1*t); 
+            elseif beta_new_gd(i) < -lam1*t; beta_new(i) = (1/(1 + 2*lam2))*(beta_new_gd(i) + lam1*t);
+            else beta_new(i) = 0; 
+            end
+        end 
+        beta(:, k) = beta_new; 
+    end 
+	MSPE = mean((A_test*beta_new - y_test).^2);
+
+% Function definition for Coordinate Descent 
+function [beta, MSPE] = CD(A_train, y_train, A_test, y_test, lam1, lam2, iterations)
+	beta = zeros(size(A_train, 2), 1);
+	for k = 1:iterations 
+		for i = 1:size(A_train, 2)
+			Ai = A_train(:, i);
+			A_i = A_train;
+			A_i(:, i) = [];
+			beta_i = beta; 
+			beta_i(i) = [];
+			gamma = (lam1/size(A_train, 1))/(Ai'*Ai);
+			a = Ai'*(y_train - A_i*beta_i)./(Ai'*Ai);
+            if a > gamma; beta(i) = (1/(1 + 2*lam2))*(a - gamma); 
+            elseif a < -gamma; beta(i) = (1/(1 + 2*lam2))*(a + gamma);
+            else beta(i) = 0; 
+            end
+		end
+	end 
+	MSPE = mean((A_test*beta - y_test).^2);
+

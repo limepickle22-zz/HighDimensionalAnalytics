@@ -1,0 +1,39 @@
+>> load("C:\\Users\\SSamtani\\Downloads\\imageA.mat");
+>> R = randn(round(.7*2048), 2048);
+>> Z = R*X;
+>> ww = DWT(2048);
+>> Y = Z*ww';
+>> A = R*ww';
+>> X2 = zeros(2048, 2048);
+>> for i = 1:2048
+		rec = omp(Y(:, i), A, 2048);
+		X2(:, i) = rec;
+	end 
+>> X3 = ww'*sparse(X2)*ww;
+>> X3 = full(X3);
+>> imshow(uint8(X));
+>> imshow(uint8(X3));
+>> errorx = sum(sum(abs(X3 - X).^2));
+>> psnr = 10*log10(255*255/(errorx/2048/2048))
+>> lambda = .01; 
+>> B = X; norm_two = norm(B); norm_inf = norm(B(:), inf)/lambda;
+>> B = B/norm_inf;
+>> L = zeros(2048, 2048); SP = zeros(2048, 2048);
+>> mu = 1.25/norm_two; mu_bar = mu*1e7; rho = 1.5;
+>> x_norm = norm(X, 'fro');
+>> total_svd = 0; iter = 0; tol = .01;
+>> while stop > tol
+		iter = iter + 1;
+		temp_T = X - L + (1/mu)*B; 
+		SP = max(temp_T - lambda/mu, 0) + min(temp_T + lambda/mu, 0);
+		[U S V] = svd(X - E_hat + (1/mu)*B, 'econ');
+		diagS = diag(S);
+		svp = length(find(diagS > 1/mu));
+		L = U(:, 1:svp)*diag(diagS(1:svp) - 1/mu)*V(:, 1:svp)';
+		total_svd = total_svd + 1;
+		W = X - L - SP;
+		B = B + mu*W;
+		mu = min(mu*rho, mu_bar);
+		stop = norm(W, 'fro')/x_norm;
+	end 
+>> imshow(uint8(L));

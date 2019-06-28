@@ -1,0 +1,15 @@
+>> load('C:\\Users\\SSamtani\\Downloads\\peaks.mat', 'Y')
+>> sigma = 1;
+>> length = 100;
+>> x = linspace(-length/2, length/2, length);
+>> gaussKernel = (1/(sigma*sqrt(2*pi))) * exp(-dist(x).^2 / (2*sigma^2));
+>> gaussKernel = gaussKernel/sum(sum(gaussKernel)); 
+>> K = kron(gaussKernel,gaussKernel');
+>> lambda = .01;
+>> y = reshape(Y, [], 1);
+>> alpha = inv(K + lambda*eye(10000))*y;
+>> smoothed = alpha'*K;
+>> imagesc(reshape(smoothed, [100, 100]));
+>> hist(y - smoothed');
+>> std(y - smoothed')
+
